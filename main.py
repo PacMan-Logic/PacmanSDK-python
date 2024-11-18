@@ -4,6 +4,7 @@ import sys
 
 from ai import ai
 from core.GymEnvironment import PacmanEnv
+from core.gamedata import GameState
 from utils.utils import write_to_judger
 
 class Controller:
@@ -16,7 +17,7 @@ class Controller:
     def run(self, ai):
         while 1:
             if self.seat == 0:
-                op = self.env.num_to_coord(ai(self.env))
+                op = self.env.num_to_coord(ai(self.env.game_state()))
                 print(f"send operation {op}", file=sys.stderr)
                 write_to_judger(f"{op[0]} {op[1]} {op[2]} {op[3]}")
                 self.env.step(self.env.coord_to_num(op))
@@ -31,7 +32,7 @@ class Controller:
                 enemy_op = [int(i) for i in enemy_op]
                 self.env.step(self.env.coord_to_num(enemy_op))
 
-                op = self.env.num_to_coord(ai(self.env))
+                op = self.env.num_to_coord(ai(self.env.game_state()))
                 print(f"send operation {op}", file=sys.stderr)
                 write_to_judger(f"{op[0]} {op[1]} {op[2]} {op[3]}")
                 self.env.step(self.env.coord_to_num(op))
