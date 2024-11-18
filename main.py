@@ -1,40 +1,66 @@
 # 整体逻辑 wxt
 # 修改对应的main逻辑 给ai传操作
 import sys
+import json
 
+from ai_to_judger import pacman_to_judger
+from ai_to_judger import ghost_to_judger
 from ai import ai
 from core.GymEnvironment import PacmanEnv
 from utils.utils import write_to_judger
 
+def pacman_op(env: PacmanEnv,ai):
+    op = ai(env.game_state()) # 返回一个含1个元素的数组
+    print(f"send operation {op[0]}", file=sys.stderr)
+    pacman_to_judger(op[0])
+
+def ghosts_op(env: PacmanEnv,ai):
+    op = ai(env.game_state()) # 返回一个含3个元素的数组
+    print(f"send operation {op[0]} {op[1]} {op[2]}", file=sys.stderr)
+    ghost_to_judger(op[0],op[1],op[2])
+
 class Controller:
     def __init__(self):
         init_info = ""
-        self.id = ""
+        self.id = "" # 获取方法？？？
         self.env = PacmanEnv()
         self.env.reset(int(init_info[0]))
+        self.level_change = True
 
     def run(self, ai):
         while 1:
-            if self.seat == 0:
-                op = self.env.num_to_coord(ai(self.env))
-                print(f"send operation {op}", file=sys.stderr)
-                write_to_judger(f"{op[0]} {op[1]} {op[2]} {op[3]}")
-                self.env.step(self.env.coord_to_num(op))
+            if self.level_change == True:
+                init_info = input()
+                self.env.ai_reset(json.loads(init_info))
+                self.level_change = False
+            if self.id == 0:
+                #当前为0号玩家
 
-                enemy_op = input().split()
-                print(f"read operation {enemy_op}", file=sys.stderr)
-                enemy_op = [int(i) for i in enemy_op]
-                self.env.step(self.env.coord_to_num(enemy_op))
+                # 0号玩家发送信息
+                pacman_op(self.env,ai)
+                
+                # 1号玩家发送信息
+
+                # 接受信息，调用step
+                get_op = input()
+                get_op_json = json.loads(get_op)
+                pacman_action = get_op_json["pacman_action"]
+                ghosts_action = get_op_json["ghosts_action"]
+                board , score , self.level_change = self.env.step(pacman_action,ghosts_action)
             else:
-                enemy_op = input().split()
-                print(f"read operation {enemy_op}", file=sys.stderr)
-                enemy_op = [int(i) for i in enemy_op]
-                self.env.step(self.env.coord_to_num(enemy_op))
+                #当前为1号玩家
 
-                op = self.env.num_to_coord(ai(self.env))
-                print(f"send operation {op}", file=sys.stderr)
-                write_to_judger(f"{op[0]} {op[1]} {op[2]} {op[3]}")
-                self.env.step(self.env.coord_to_num(op))
+                # 0号玩家发送信息
+                
+                # 1号玩家发送信息
+                pacman_op(self.env,ai)
+
+                # 接受信息，调用step
+                get_op = input()
+                get_op_json = json.loads(get_op)
+                pacman_action = get_op_json["pacman_action"]
+                ghosts_action = get_op_json["ghosts_action"]
+                board , score , self.level_change = self.env.step(pacman_action,ghosts_action)
 
 
 if __name__ == "__main__":
