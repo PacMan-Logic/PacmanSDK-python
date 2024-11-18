@@ -1,3 +1,11 @@
+'''
+TODO:lxy
+两个函数
+ghost_to_judger(int op1 , int op2 , int op3) 传入3个数字，发包给judger
+pacman_to_judger
+
+'''
+
 import json
 from utils.utils import write_to_judger
 
