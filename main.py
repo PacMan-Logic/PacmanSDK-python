@@ -20,10 +20,9 @@ def ghosts_op(env: PacmanEnv,ai):
 
 class Controller:
     def __init__(self):
-        init_info = ""
-        self.id = 0 # 获取方法？？？
+        id = int(input())
+        self.id = id
         self.env = PacmanEnv()
-        self.env.reset(int(init_info[0]))
         self.level_change = True
 
     def run(self, ai):
