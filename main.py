@@ -27,6 +27,7 @@ class Controller:
         id = int(input())
         self.id = id
         self.level_change = True
+        self.eat_all_beans = False
 
     def run(self, ai):
         while 1:
