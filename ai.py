@@ -1835,5 +1835,4 @@ class PacmanAI:
 
 
 ai_func = PacmanAI().choose_move
-# print(ai_func(example_gamestate))
 __all__ = ["ai_func"]
