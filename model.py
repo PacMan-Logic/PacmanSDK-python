@@ -8,8 +8,11 @@ import torch.nn.functional as F
 class PacmanNet(nn.Module):
     def __init__(self, input_channel_num, num_actions, extra_size):
         super().__init__()
-        self.conv1 = nn.Conv2d(input_channel_num, 32, kernel_size=8, stride=4)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
+        self.channels = input_channel_num
+        self.embeddings = nn.ModuleList(
+            [nn.Embedding(9, 16) for _ in range(input_channel_num)])
+        self.conv1 = nn.Conv2d(64, 64, kernel_size=8, stride=4)
+        self.conv2 = nn.Conv2d(64, 64, kernel_size=4, stride=2)
         self.bn = nn.BatchNorm2d(64)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=2)
 
@@ -19,6 +22,17 @@ class PacmanNet(nn.Module):
         self.fc2 = nn.Linear(32, num_actions)
 
     def forward(self, x, y):
+        B, C, H, W = x.shape
+        embedded_channels = []
+        for i in range(self.channels):
+            flattened_channel = x[:, i, :, :].view(B, -1).long()
+            embedded_channel = self.embeddings[i](flattened_channel)
+            embedded_channel = embedded_channel.view(
+                B, 16, H, W)
+            embedded_channels.append(embedded_channel)
+        # Concatenate along the channel dimension
+        x = torch.cat(embedded_channels, dim=1)
+
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = self.bn(x)
@@ -34,8 +48,12 @@ class PacmanNet(nn.Module):
 class GhostNet(nn.Module):
     def __init__(self, input_channel_num, num_actions, extra_size):
         super().__init__()
-        self.conv1 = nn.Conv2d(input_channel_num, 32, kernel_size=8, stride=4)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
+        self.channels = input_channel_num
+        self.embeddings = nn.ModuleList(
+            [nn.Embedding(9, 16) for _ in range(input_channel_num)])
+
+        self.conv1 = nn.Conv2d(64, 64, kernel_size=8, stride=4)
+        self.conv2 = nn.Conv2d(64, 64, kernel_size=4, stride=2)
         self.bn = nn.BatchNorm2d(64)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=2)
 
@@ -45,6 +63,16 @@ class GhostNet(nn.Module):
         self.fc2 = nn.Linear(32, num_actions*3)
 
     def forward(self, x, y):
+        B, C, H, W = x.shape
+        embedded_channels = []
+        for i in range(self.channels):
+            flattened_channel = x[:, i, :, :].view(B, -1).long()
+            embedded_channel = self.embeddings[i](flattened_channel)
+            embedded_channel = embedded_channel.view(
+                B, 16, H, W)
+            embedded_channels.append(embedded_channel)
+        # Concatenate along the channel dimension
+        x = torch.cat(embedded_channels, dim=1)
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = self.bn(x)
@@ -60,12 +88,12 @@ class GhostNet(nn.Module):
 
 # test the shape of the output
 if __name__ == "__main__":
-    rand_input = torch.rand(1, 5, 38, 38)
+    rand_input = torch.rand(1, 4, 38, 38)
     extra_input = torch.rand(1, 10)
-    pacman_net = PacmanNet(5, 5, 10)
+    pacman_net = PacmanNet(4, 5, 10)
     res = pacman_net(rand_input, extra_input)
     print(res.shape)
 
-    ghost_net = GhostNet(5, 5, 10)
+    ghost_net = GhostNet(4, 5, 10)
     res = ghost_net(rand_input, extra_input)
     print(res.shape)

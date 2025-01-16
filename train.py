@@ -22,13 +22,13 @@ MEMORY_SIZE = 10000
 LEARNING_RATE = 1e-4
 
 # initialize networks
-policy_net_pacman = PacmanNet(5, 5, 40)
-target_net_pacman = PacmanNet(5, 5, 40)
+policy_net_pacman = PacmanNet(4, 5, 40)
+target_net_pacman = PacmanNet(4, 5, 40)
 target_net_pacman.load_state_dict(policy_net_pacman.state_dict())
 target_net_pacman.eval()
 
-policy_net_ghost = GhostNet(5, 5, 40)
-target_net_ghost = GhostNet(5, 5, 40)
+policy_net_ghost = GhostNet(4, 5, 40)
+target_net_ghost = GhostNet(4, 5, 40)
 target_net_ghost.load_state_dict(policy_net_ghost.state_dict())
 target_net_ghost.eval()
 
@@ -75,6 +75,7 @@ def state_dict_to_tensor(state_dict):
     if isinstance(board, list):
         board = np.array(board)
     size = board.shape[0]
+    # print(board)
     # pad board to 38x38
     padding_num = 38 - size
     board = np.pad(board, pad_width=(0, padding_num),
@@ -91,12 +92,6 @@ def state_dict_to_tensor(state_dict):
     if "ghost_pos" in state_dict:
         for ghost in state_dict["ghost_pos"]:
             ghost_pos[ghost[0] + padding_num][ghost[1] + padding_num] = 1
-
-    # board area matrix
-    board_area = np.ones((size, size))
-    board_area = np.pad(
-        board_area, pad_width=(0, padding_num), mode="constant", constant_values=0
-    )
 
     portal_pos = np.zeros((38, 38))
     if "portal" in state_dict:
@@ -117,7 +112,7 @@ def state_dict_to_tensor(state_dict):
     # print(board.shape, pacman_pos.shape, ghost_pos.shape,
     #       board_area.shape, portal_pos.shape)
     return torch.tensor(
-        np.stack([board, pacman_pos, ghost_pos, board_area, portal_pos]),
+        np.stack([board, pacman_pos, ghost_pos, portal_pos]),
         dtype=torch.float32,
     ).unsqueeze(0), torch.tensor(
         [level, round, size, portal_available] * 10, dtype=torch.float32
@@ -196,7 +191,13 @@ if __name__ == "__main__":
     num_episodes = 1000
     epsilon = EPSILON_START
     for episode in range(num_episodes):
-        state = env.reset()
+        try:
+            state = env.reset()
+        except Exception as e:
+            if isinstance(e, KeyboardInterrupt):
+                break
+            else:
+                state = env.reset_start()
         state, extra = state_dict_to_tensor(state)
         # print(state.shape, extra.shape)
 
@@ -212,7 +213,7 @@ if __name__ == "__main__":
             reward1 = torch.tensor([reward1], dtype=torch.float32)
             reward2 = torch.tensor([reward2], dtype=torch.float32)
             # print(next_state.shape, next_extra.shape)
-            # print(reward1, reward2)
+            print(reward1, reward2)
 
 
             memory.append(
