@@ -12,13 +12,13 @@ from model import *
 env = PacmanEnv("local")
 
 # hyperparameters
-BATCH_SIZE = 32
+BATCH_SIZE = 8
 GAMMA = 0.99
 EPSILON_START = 1.0
 EPSILON_END = 0.1
 EPSILON_DECAY = 10000
 TARGET_UPDATE = 10
-MEMORY_SIZE = 10000
+MEMORY_SIZE = 100
 LEARNING_RATE = 1e-4
 
 # initialize networks
@@ -191,13 +191,7 @@ if __name__ == "__main__":
     num_episodes = 1000
     epsilon = EPSILON_START
     for episode in range(num_episodes):
-        try:
-            state = env.reset()
-        except Exception as e:
-            if isinstance(e, KeyboardInterrupt):
-                break
-            else:
-                state = env.reset_start()
+        state = env.reset(mode="local")
         state, extra = state_dict_to_tensor(state)
         # print(state.shape, extra.shape)
 
