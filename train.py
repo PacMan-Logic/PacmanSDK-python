@@ -1,7 +1,6 @@
 import random
 from collections import namedtuple
 
-import gym
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -72,14 +71,14 @@ def select_action_pacman(state, extra, epsilon, policy_net):
 
 # trainsform state dict to state tensor
 def state_dict_to_tensor(state_dict):
-    if "board_size" in state_dict:
-        size = state_dict["board_size"]
-    else:
-        size = 38
     board = state_dict["board"]
+    if isinstance(board, list):
+        board = np.array(board)
+    size = board.shape[0]
     # pad board to 38x38
-    padding_num = (38 - size) // 2
-    board = np.pad(board, pad_width=padding_num, mode="constant", constant_values=0)
+    padding_num = 38 - size
+    board = np.pad(board, pad_width=(0, padding_num),
+                   mode="constant", constant_values=0)
     # pacman position matrix
     pacman_pos = np.zeros((38, 38))
     if "pacman_pos" in state_dict:
@@ -96,7 +95,7 @@ def state_dict_to_tensor(state_dict):
     # board area matrix
     board_area = np.ones((size, size))
     board_area = np.pad(
-        board_area, pad_width=padding_num, mode="constant", constant_values=0
+        board_area, pad_width=(0, padding_num), mode="constant", constant_values=0
     )
 
     portal_pos = np.zeros((38, 38))
@@ -115,6 +114,8 @@ def state_dict_to_tensor(state_dict):
     if "portal_available" in state_dict:
         portal_available = int(state_dict["portal_available"])
 
+    # print(board.shape, pacman_pos.shape, ghost_pos.shape,
+    #       board_area.shape, portal_pos.shape)
     return torch.tensor(
         np.stack([board, pacman_pos, ghost_pos, board_area, portal_pos]),
         dtype=torch.float32,
@@ -141,14 +142,18 @@ def optimize_model():
     next_state_batch = torch.cat(batch.next_state)
     next_extra_batch = torch.cat(batch.next_extra)
 
+    # print(state_batch.shape, extra_batch.shape, action1_batch.shape, action2_batch.shape,
+    #       reward1_batch.shape, reward2_batch.shape, next_state_batch.shape, next_extra_batch.shape)
+
     state_action_values1 = policy_net_pacman(state_batch, extra_batch).gather(
         1, action1_batch
     )
     state_action_values2 = (
         policy_net_ghost(state_batch, extra_batch)
-        .gather(2, action2_batch.unsqueeze(2))
-        .squeeze(2)
+        .gather(2, action2_batch.transpose(2, 1))
     )
+
+    # print(state_action_values1.shape, state_action_values2.shape)
 
     next_state_values1 = (
         target_net_pacman(next_state_batch, next_extra_batch).max(1)[0].detach()
@@ -157,17 +162,25 @@ def optimize_model():
         target_net_ghost(next_state_batch, next_extra_batch).max(2)[0].detach()
     )
 
+    # print(next_state_values1.shape, next_state_values2.shape)
+    # print(reward1_batch.shape, reward2_batch.shape)
+
     expected_state_action_values1 = (
         next_state_values1 * GAMMA) + reward1_batch
     expected_state_action_values2 = (
         next_state_values2 * GAMMA) + reward2_batch
 
+    # print(expected_state_action_values1.shape,
+    #       expected_state_action_values2.shape)
+
     loss1 = F.smooth_l1_loss(
         state_action_values1, expected_state_action_values1.unsqueeze(1)
     )
     loss2 = F.smooth_l1_loss(
-        state_action_values2, expected_state_action_values2.unsqueeze(1)
+        state_action_values2, expected_state_action_values2.unsqueeze(2)
     )
+
+    # print(f"{loss1=}, {loss2=}")
 
     optimizer_pacman.zero_grad()
     loss1.backward()
@@ -185,20 +198,22 @@ if __name__ == "__main__":
     for episode in range(num_episodes):
         state = env.reset()
         state, extra = state_dict_to_tensor(state)
-        print(state.shape, extra.shape)
+        # print(state.shape, extra.shape)
 
         for t in range(1000):
             action1 = select_action_pacman(state, extra, epsilon, policy_net_pacman)
             action2 = select_action_ghost(state, extra, epsilon, policy_net_ghost)
-            print(action1, action2)
+            # print(action1, action2)
             next_state, reward1, reward2, done, _ = env.step(action1, action2)
+            env.render('local')
             next_state, next_extra = state_dict_to_tensor(next_state)
             # next_state = torch.tensor(
             # next_state, dtype=torch.float32).unsqueeze(0)
             reward1 = torch.tensor([reward1], dtype=torch.float32)
             reward2 = torch.tensor([reward2], dtype=torch.float32)
-            print(next_state.shape, next_extra.shape)
-            print(reward1, reward2)
+            # print(next_state.shape, next_extra.shape)
+            # print(reward1, reward2)
+
 
             memory.append(
                 Transition(
