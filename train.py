@@ -10,27 +10,36 @@ from core.GymEnvironment import PacmanEnv
 from model import *
 
 env = PacmanEnv("local")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # hyperparameters
 BATCH_SIZE = 8
 GAMMA = 0.99
-EPSILON_START = 1.0
+EPSILON_START = 0.6
 EPSILON_END = 0.1
-EPSILON_DECAY = 10000
-TARGET_UPDATE = 10
+EPSILON_DECAY = 10
+TARGET_UPDATE = 1
 MEMORY_SIZE = 100
 LEARNING_RATE = 1e-4
 
 # initialize networks
 policy_net_pacman = PacmanNet(4, 5, 40)
 target_net_pacman = PacmanNet(4, 5, 40)
+policy_net_pacman.load_state_dict(torch.load("pacman.pth"))
 target_net_pacman.load_state_dict(policy_net_pacman.state_dict())
 target_net_pacman.eval()
 
+policy_net_pacman.to(device)
+target_net_pacman.to(device)
+
 policy_net_ghost = GhostNet(4, 5, 40)
 target_net_ghost = GhostNet(4, 5, 40)
+policy_net_ghost.load_state_dict(torch.load("ghost.pth"))
 target_net_ghost.load_state_dict(policy_net_ghost.state_dict())
 target_net_ghost.eval()
+
+policy_net_ghost.to(device)
+target_net_ghost.to(device)
 
 optimizer_pacman = optim.Adam(policy_net_pacman.parameters(), lr=LEARNING_RATE)
 optimizer_ghost = optim.Adam(policy_net_ghost.parameters(), lr=LEARNING_RATE)
@@ -57,8 +66,10 @@ def select_action_ghost(state, extra, epsilon, policy_net):
         return np.random.randint(size=3, low=0, high=4)
     else:
         with torch.no_grad():
-            values = policy_net(state, extra).reshape(-1, 5)
-            return torch.argmax(values, dim=0).cpu().numpy()
+            values = policy_net(
+                state.to(device), extra.to(device)).reshape(-1, 5)
+            # print(f"{values.shape=}")
+            return torch.argmax(values, dim=1).cpu().numpy()
 
 
 def select_action_pacman(state, extra, epsilon, policy_net):
@@ -66,7 +77,7 @@ def select_action_pacman(state, extra, epsilon, policy_net):
         return np.random.randint(low=0, high=4)
     else:
         with torch.no_grad():
-            return torch.argmax(policy_net(state, extra)).cpu().item()
+            return torch.argmax(policy_net(state.to(device), extra.to(device))).cpu().item()
 
 
 # trainsform state dict to state tensor
@@ -140,30 +151,32 @@ def optimize_model():
     # print(state_batch.shape, extra_batch.shape, action1_batch.shape, action2_batch.shape,
     #       reward1_batch.shape, reward2_batch.shape, next_state_batch.shape, next_extra_batch.shape)
 
-    state_action_values1 = policy_net_pacman(state_batch, extra_batch).gather(
-        1, action1_batch
+    state_action_values1 = policy_net_pacman(state_batch.to(device), extra_batch.to(device)).gather(
+        1, action1_batch.to(device)
     )
     state_action_values2 = (
-        policy_net_ghost(state_batch, extra_batch)
-        .gather(2, action2_batch.transpose(2, 1))
+        policy_net_ghost(state_batch.to(device), extra_batch.to(device))
+        .gather(2, action2_batch.to(device).transpose(2, 1))
     )
 
     # print(state_action_values1.shape, state_action_values2.shape)
 
     next_state_values1 = (
-        target_net_pacman(next_state_batch, next_extra_batch).max(1)[0].detach()
+        target_net_pacman(next_state_batch.to(device),
+                          next_extra_batch.to(device)).max(1)[0].detach()
     )
     next_state_values2 = (
-        target_net_ghost(next_state_batch, next_extra_batch).max(2)[0].detach()
+        target_net_ghost(next_state_batch.to(device),
+                         next_extra_batch.to(device)).max(2)[0].detach()
     )
 
     # print(next_state_values1.shape, next_state_values2.shape)
     # print(reward1_batch.shape, reward2_batch.shape)
 
     expected_state_action_values1 = (
-        next_state_values1 * GAMMA) + reward1_batch
+        next_state_values1 * GAMMA) + reward1_batch.to(device)
     expected_state_action_values2 = (
-        next_state_values2 * GAMMA) + reward2_batch
+        next_state_values2 * GAMMA) + reward2_batch.to(device)
 
     # print(expected_state_action_values1.shape,
     #       expected_state_action_values2.shape)
@@ -197,8 +210,8 @@ if __name__ == "__main__":
 
         for t in range(1000):
             action1 = select_action_pacman(state, extra, epsilon, policy_net_pacman)
-            action2 = select_action_ghost(state, extra, epsilon, policy_net_ghost)
-            # print(action1, action2)
+            action2 = select_action_ghost(
+                state, extra, epsilon, policy_net_ghost)
             next_state, reward1, reward2, done, _ = env.step(action1, action2)
             env.render('local')
             next_state, next_extra = state_dict_to_tensor(next_state)
@@ -207,7 +220,7 @@ if __name__ == "__main__":
             reward1 = torch.tensor([reward1], dtype=torch.float32)
             reward2 = torch.tensor([reward2], dtype=torch.float32)
             # print(next_state.shape, next_extra.shape)
-            print(reward1, reward2)
+            print(reward1.item(), reward2.tolist())
 
 
             memory.append(
@@ -235,5 +248,7 @@ if __name__ == "__main__":
         if episode % TARGET_UPDATE == 0:
             target_net_pacman.load_state_dict(policy_net_pacman.state_dict())
             target_net_ghost.load_state_dict(policy_net_ghost.state_dict())
+            torch.save(policy_net_pacman.state_dict(), "pacman.pth")
+            torch.save(policy_net_ghost.state_dict(), "ghost.pth")
 
         epsilon = max(EPSILON_END, EPSILON_START - episode / EPSILON_DECAY)
