@@ -70,12 +70,11 @@ class PacmanAI:
         """判断是否能在幽灵到达前到达传送门"""
         pacman_pos = np.array(game_state.pacman_pos)
         portal_pos = np.array(game_state.portal_coord)
-        ghosts_pos = np.array(game_state.ghosts_pos)
 
         dist_to_portal = np.linalg.norm(pacman_pos - portal_pos)
         ghosts_projection_dist_to_catch = [
             self.point_to_vector_projection_distance(ghost_pos, pacman_pos, portal_pos)
-            for ghost_pos in ghosts_pos
+            for ghost_pos in game_state.ghosts_pos
         ]
 
         return dist_to_portal < min(ghosts_projection_dist_to_catch) - 1
@@ -86,7 +85,6 @@ class PacmanAI:
     def update_state(self, game_state: GameState):
         """更新游戏状态"""
         pacman_pos = np.array(game_state.pacman_pos)
-        ghosts_pos = np.array(game_state.ghosts_pos)
         # 计算威胁程度
         ghost_distances = [
             len(
@@ -178,7 +176,7 @@ class PacmanAI:
 
         return []
 
-    def evaluate_position(self, pos, game_state):
+    def evaluate_position(self, pos, game_state: GameState):
         """评估位置的价值"""
         pacman_pos = np.array(game_state.pacman_pos)
         weights = self.weights[self.current_state]
@@ -241,7 +239,7 @@ class PacmanAI:
                 moves.append((new_pos, move_num))
         return moves
 
-    def is_valid_position(self, pos, game_state):
+    def is_valid_position(self, pos, game_state: GameState):
         """检查位置是否有效"""
         x, y = int(pos[0]), int(pos[1])
         if 0 <= x < game_state.board_size and 0 <= y < game_state.board_size:
