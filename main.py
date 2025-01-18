@@ -1,11 +1,11 @@
-import sys
 import json
+import sys
 
-from ai_to_judger import pacman_to_judger
-from ai_to_judger import ghost_to_judger
 from ai import *
-from core.GymEnvironment import PacmanEnv
+from ai_rl import PacmanAI
+from ai_to_judger import ghost_to_judger, pacman_to_judger
 from core.gamedata import GameState
+from core.GymEnvironment import PacmanEnv
 from utils.utils import write_to_judger
 
 
@@ -78,4 +78,5 @@ class Controller:
 if __name__ == "__main__":
     print("init done", file=sys.stderr)
     controller = Controller()
+    ai_func = PacmanAI()
     controller.run(ai_func)

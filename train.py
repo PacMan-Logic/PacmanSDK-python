@@ -201,6 +201,7 @@ def optimize_model():
 
 # training iteration
 if __name__ == "__main__":
+    print(device)
     num_episodes = 1000
     epsilon = EPSILON_START
     for episode in range(num_episodes):
@@ -213,13 +214,14 @@ if __name__ == "__main__":
             action2 = select_action_ghost(
                 state, extra, epsilon, policy_net_ghost)
             next_state, reward1, reward2, done, _ = env.step(action1, action2)
-            env.render('local')
+            # env.render('local')
             next_state, next_extra = state_dict_to_tensor(next_state)
             # next_state = torch.tensor(
             # next_state, dtype=torch.float32).unsqueeze(0)
             reward1 = torch.tensor([reward1], dtype=torch.float32)
             reward2 = torch.tensor([reward2], dtype=torch.float32)
             # print(next_state.shape, next_extra.shape)
+            print(action1, action2)
             print(reward1.item(), reward2.tolist())
 
 
