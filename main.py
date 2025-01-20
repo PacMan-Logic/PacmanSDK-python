@@ -78,5 +78,5 @@ class Controller:
 if __name__ == "__main__":
     print("init done", file=sys.stderr)
     controller = Controller()
-    ai_func = PacmanAI()
+    # ai_func = PacmanAI()
     controller.run(ai_func)
