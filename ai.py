@@ -277,8 +277,7 @@ class PacmanAI:
 
         return [Direction.STAY.value]  # 默认停留
 
-
 # TODO: 你需要实现一个ai函数
 
-ai_func = PacmanAI().choose_move  # TODO: 你需要把ai_func替换为自己的ai函数
+ai_func = PacmanAI().choose_move
 __all__ = ["ai_func"]

@@ -1,11 +1,11 @@
-import sys
 import json
+import sys
 
-from ai_to_judger import pacman_to_judger
-from ai_to_judger import ghost_to_judger
 from ai import *
-from core.GymEnvironment import PacmanEnv
+from ai_rl import PacmanAI
+from ai_to_judger import ghost_to_judger, pacman_to_judger
 from core.gamedata import GameState
+from core.GymEnvironment import PacmanEnv
 from utils.utils import write_to_judger
 
 
@@ -27,6 +27,7 @@ class Controller:
         id = int(input())
         self.id = id
         self.level_change = True
+        self.eat_all_beans = False
 
     def run(self, ai):
         while 1:
@@ -40,7 +41,7 @@ class Controller:
                 # 0号玩家发送信息
                 pacman_op(self.env, ai)
 
-                # 1号玩家发送信息
+                # 等待1号玩家发送信息
                 get_info = input()
                 print(f"receive info: {get_info}", file=sys.stderr)
 
@@ -50,13 +51,13 @@ class Controller:
                 get_op_json = json.loads(get_op)
                 pacman_action = get_op_json["pacman_action"]
                 ghosts_action = get_op_json["ghosts_action"]
-                board, score, self.level_change = self.env.step(
+                info , pacman_reward , ghosts_reward , self.level_change , self.eat_all_beans = self.env.step(
                     pacman_action, ghosts_action
                 )
             else:
                 # 当前为1号玩家
 
-                # 0号玩家发送信息
+                # 等待0号玩家发送信息
                 get_info = input()
                 print(f"receive info: {get_info}", file=sys.stderr)
 
@@ -69,7 +70,7 @@ class Controller:
                 get_op_json = json.loads(get_op)
                 pacman_action = get_op_json["pacman_action"]
                 ghosts_action = get_op_json["ghosts_action"]
-                board, score, self.level_change = self.env.step(
+                info , pacman_reward , ghosts_reward , self.level_change , self.eat_all_beans = self.env.step(
                     pacman_action, ghosts_action
                 )
 
@@ -77,4 +78,5 @@ class Controller:
 if __name__ == "__main__":
     print("init done", file=sys.stderr)
     controller = Controller()
+    # ai_func = PacmanAI()
     controller.run(ai_func)
