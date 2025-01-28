@@ -2,7 +2,7 @@ import json
 import sys
 
 from ai import *
-from ai_rl import PacmanAI
+# from ai_rl import PacmanAI
 from ai_to_judger import ghost_to_judger, pacman_to_judger
 from core.gamedata import GameState
 from core.GymEnvironment import PacmanEnv
