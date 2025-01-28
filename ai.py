@@ -22,7 +22,6 @@ class PacmanAI:
 
         # 动态参数
         self.GHOST_DANGER_DISTANCE = 5
-        self.BONUS_BEAN_PRIORITY = 2.0
 
         # 状态权重
         self.weights = {
@@ -34,11 +33,12 @@ class PacmanAI:
 
         # 特殊豆子价值
         self.bean_values = {
-            3: 4.0,  # BONUS_BEAN
-            4: 3.0,  # SPEED_BEAN
+            3: 1.0,  # BONUS_BEAN
+            4: 2.0,  # SPEED_BEAN
             5: 2.5,  # MAGNET_BEAN
             6: 3.0,  # SHIELD_BEAN
             7: 2.5,  # DOUBLE_BEAN
+            8: 3.0,  # FROZE_BEAN
         }
 
     def count_remaining_bean(self, game_state: GameState):
@@ -130,7 +130,7 @@ class PacmanAI:
         for i in range(game_state.board_size):
             for j in range(game_state.board_size):
                 bean_type = game_state.board[i][j]
-                if bean_type >= 3 and bean_type <= 7:  # 特殊豆子
+                if bean_type in SPECIAL_BEANS_ITERATOR:  # 特殊豆子
                     pos = np.array([i, j])
                     dist = np.linalg.norm(pacman_pos - pos)
                     value = self.bean_values[bean_type]
